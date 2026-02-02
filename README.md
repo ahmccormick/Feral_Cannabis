@@ -1,4 +1,4 @@
-This repository provides the supporting data for a recently submitted manuscript entitled "Understanding environmental adaptation in north american feral cannabis"
+This repository provides the supporting data for a recently submitted manuscript entitled "Ancestry and Environmental Adaptation in North American Feral Cannabis"
 
 A pre-print of this work can be found at: X
 
