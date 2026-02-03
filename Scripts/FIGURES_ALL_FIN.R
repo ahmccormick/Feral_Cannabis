@@ -514,7 +514,7 @@ ggtree(tree) %<+% tree_data +
     legend.title = element_text(size = 10),
     legend.text = element_text(size = 9)
   )
-ggsave("/Users/annamccormick/R/Feral_Cannabis_EGS/newTree/scratch_round1/final_tree.pdf", width = 12, height = 14)
+#ggsave("/Users/annamccormick/R/Feral_Cannabis_EGS/newTree/scratch_round1/final_tree.pdf", width = 12, height = 14)
 
 #
 ggtree(tree) %<+% tree_data +
@@ -536,8 +536,8 @@ ggtree(tree) %<+% tree_data +
   )
 
 # Save the final figure
-ggsave("/Users/annamccormick/R/Feral_Cannabis_EGS/newTree/scratch_round1/final_tree.pdf", 
-       width = 49, height = 14)
+#ggsave("/Users/annamccormick/R/Feral_Cannabis_EGS/newTree/scratch_round1/final_tree.pdf", 
+       #width = 49, height = 14)
 
 ################################################
 #adding in bootstrap good 95% support branche markers on tree
@@ -693,7 +693,127 @@ percent_high_support <- 100 * high_support / total_nodes
 cat(sprintf("Nodes with ≥95%% support: %d out of %d (%.1f%%)\n",
             high_support, total_nodes, percent_high_support))
 
+##############
+######circular TREE
+library(ggtree)
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
 
+# ---- 1) Make plotting tree and shorten hops terminal branch ----
+tree_plot <- tree
+hop_tip <- which(tree_plot$tip.label == "hops")
+hop_edge_idx <- which(tree_plot$edge[, 2] == hop_tip)
+tree_plot$edge.length[hop_edge_idx] <- tree_plot$edge.length[hop_edge_idx] * 0.2
+
+# ---- 2) Build base plot + attach metadata ----
+p <- ggtree(tree_plot, layout = "circular") %<+% tree_data +
+  geom_tree(linewidth = 0.2)
+
+# ---- 3) Parse node supports robustly ----
+node_supports <- suppressWarnings(
+  as.numeric(gsub("^\\s*([0-9.]+).*$", "\\1", tree_plot$node.label))
+)
+
+support_df <- data.frame(
+  node = (Ntip(tree_plot) + 1):(Ntip(tree_plot) + tree_plot$Nnode),
+  support = node_supports
+)
+
+p$data <- left_join(p$data, support_df, by = "node")
+
+# ---- 4) Decide threshold depending on scale ----
+thr <- if (max(p$data$support, na.rm = TRUE) <= 1.01) 0.95 else 95
+
+# Optional: choose how to format labels (probabilities vs percent)
+p$data <- p$data %>%
+  mutate(
+    support_label = case_when(
+      is.na(support) ~ NA_character_,
+      thr < 1.01     ~ sprintf("%.2f", support),         # e.g., 0.97
+      TRUE          ~ sprintf("%d", round(support))      # e.g., 97
+    )
+  )
+
+# ---- 5) Plot: tips + pink dots + numeric labels for high supports ----
+p_circ <- p +
+  geom_tippoint(aes(color = Group), size = 0.9, alpha = 0.9) +
+  
+  # Pink markers for high support internal nodes
+  geom_point2(
+    aes(subset = !isTip & !is.na(support) & support >= thr),
+    size = 0.9, shape = 21, fill = "pink", color = "pink", stroke = 0.2
+  ) +
+  
+  # Numeric labels for the same high support nodes
+  geom_label_repel(
+    data = p$data %>% filter(!isTip, !is.na(support), support >= thr),
+    aes(x = x, y = y, label = support_label),
+    size = 2.2,
+    label.size = 0.15,
+    fill = "white",
+    min.segment.length = 0,
+    segment.size = 0.2,
+    max.overlaps = 200
+  ) +
+  
+  scale_color_manual(values = my_cols, drop = FALSE) +
+  theme_void() +
+  theme(legend.position = "right")
+
+p_circ
+
+library(ggtree)
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+
+# after you've built p and joined support into p$data (as you already do)
+# and after thr is defined...
+
+# choose what "main divisions" means: inner 12% of root-to-tip distance
+x_cut <- quantile(p$data$x[!p$data$isTip], 0.005, na.rm = TRUE)
+
+label_df <- p$data %>%
+  filter(!isTip, !is.na(support), support >= thr, x <= x_cut) %>%
+  mutate(lbl = if (thr < 1.01) sprintf("%.2f", support) else sprintf("%d", round(support)))
+
+p_circ_main <- p +
+  geom_tippoint(aes(color = Group), size = 1.5, alpha = 0.9) + #leaf tip circle size
+  
+  # keep pink dots for all >=95 if you want, OR restrict them similarly
+  geom_point2(
+    aes(subset = !isTip & !is.na(support) & support >= thr),
+    size = 2.0, shape = 21, fill = "pink", color = "pink", stroke = 0.2
+  ) +
+  
+  # print only the main-division supports
+  geom_label_repel(
+    data = label_df,
+    aes(x = x, y = y, label = lbl),
+    size = 3,
+    label.size = 0.15,
+    fill = "white",
+    nudge_x = -0.6,
+    segment.size = 0.2,
+    min.segment.length = 0,
+    max.overlaps = Inf
+  ) +
+  scale_color_manual(values = my_cols, drop = FALSE) +
+  theme_void() +
+  theme(legend.position = "right")
+
+p_circ_main
+
+
+ggsave(
+  filename = "/Users/annamccormick/R/Feral_Cannabis_EGS/RESULTS PPT/Figure_pannels_pdf/tree1a.pdf",
+  plot     = p_circ_main,
+  width    = 15,
+  height   = 15,
+  units    = "in",
+  device   = "pdf"
+)
 
 ########################################################################################################################################################################
 # Figure 3
