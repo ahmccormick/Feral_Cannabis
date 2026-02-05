@@ -6,7 +6,7 @@ High resolution verions of main and supplemental figures will be available on fi
 
 Scripts for VCF and EGS pipelines can be found here: https://github.com/ahmccormick/Cannabis_EGS
 
-Raw data for the Aina et al., 2025 dataset can be found at: https://www.ncbi.nlm.nih.gov/bioproject/PRJNA1206134.
+Raw data for the Aina et al., 2025 dataset can be found at: https://www.ncbi.nlm.nih.gov/bioproject/PRJNA1206134
 
 
 
